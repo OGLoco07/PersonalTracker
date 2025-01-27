@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        h1, h2 { color: #333; }
+        .container { max-width: 800px; margin: auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        form { margin: 20px 0; }
+        input[type="text"], input[type="number"], input[type="date"] { width: calc(100% - 22px); padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #218838; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .summary { margin: 20px 0; }
+        .alert { padding: 10px; background-color: #f44336; color: white; margin-bottom: 15px; display: none; }
+        .success { background-color: #4CAF50; }
+        .clear-button { background-color: #dc3545; }
+        .clear-button:hover { background-color: #c82333; }
+        .explanation { margin: 20px 0; font-size: 0.9em; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Personal Finance Tracker</h1>
+        <div class="alert" id="alert"></div>
+
+        <h2>Add Income</h2>
+        <form id="incomeForm">
+            <input type="date" id="incomeDate" required>
+            <input type="text" id="incomeSource" placeholder="Source" required>
+            <input type="number" id="incomeAmount" placeholder="Amount" required>
+            <button type="submit">Add Income</button>
+        </form>
+
+        <h2>Add Expense</h2>
+        <form id="expenseForm">
+            <input type="date" id="expenseDate" required>
+            <select id="expenseCategory" required>
+                <option value="" disabled selected>Select Category</option>
+                <option value="Housing">Housing</option>
+                <option value="Groceries">Groceries</option>
+                <option value="Transportation">Transportation</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Education">Education</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Clothing">Clothing</option>
+                <option value="Miscellaneous">Miscellaneous</option>
+            </select>
+            <input type="number" id="expenseAmount" placeholder="Amount" required>
+            <button type="submit">Add Expense</button>
+        </form>
+
+        <h2>Income</h2>
+        <table id="incomeTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Source</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h2>Expenses</h2>
+        <div>
+            <h3>Filter Expenses by Date Range</h3>
+            <input type="date" id="startDate" required>
+            <input type="date" id="endDate" required>
+            <button id="filterExpenses">Filter</button>
+        </div>
+        <table id="expenseTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div class="summary">
+            <h2>Summary</h2>
+            <p>Total Income: $<span id="totalIncome">0</span></p>
+            <p>Total Expenses: $<span id="totalExpenses">0</span></p>
+            <p>Net Savings: $<span id="netSavings">0</span></p>
+            <p>Percentage of Income Saved: <span id="savingsPercentage">0</span>%</p>
+            <button class="clear-button" id="clearAll">Clear All Entries</button>
+        </div>
+
+        <div class="explanation">
+            <h3>How It Works</h3>
+            <p>Your total income is calculated by summing all income entries. Total expenses are calculated similarly. Net savings are derived by subtracting total expenses from total income. The percentage of income saved is calculated by dividing net savings by total income and multiplying by 100. You can filter expenses by selecting a date range to view only the relevant entries.</p>
+        </div>
+    </div>
+
+    <script>
+        const incomeForm = document.getElementById('incomeForm');
+        const expenseForm = document.getElementById('expenseForm');
+        const incomeTableBody = document.querySelector('#incomeTable tbody');
+        const expenseTableBody = document.querySelector('#expenseTable tbody');
+        const totalIncomeSpan = document.getElementById('totalIncome');
+        const totalExpensesSpan = document.getElementById('totalExpenses');
+        const netSavingsSpan = document.getElementById('netSavings');
+        const savingsPercentageSpan = document.getElementById('savingsPercentage');
+        const alertBox = document.getElementById('alert');
+
+        let totalIncome = 0;
+        let totalExpenses = 0;
+
+        function loadData() {
+            const incomes = JSON.parse(localStorage.getItem('incomes')) || [];
+            const expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+
+            incomes.forEach(income => addIncomeToTable(income.date, income.source, income.amount));
+            expenses.forEach(expense => addExpenseToTable(expense.date, expense.category, expense.amount));
+        }
+
+        function addIncomeToTable(date, source, amount) {
+            const row = incomeTableBody.insertRow();
+            row.insertCell(0).innerText = date;
+            row.insertCell(1).innerText = source;
+            row.insertCell(2).innerText = amount;
+
+            totalIncome += parseFloat(amount);
+            totalIncomeSpan.innerText = totalIncome.toFixed(2);
+            updateNetSavings();
+            showAlert('Income added successfully!', 'success');
+        }
+
+        function addExpenseToTable(date, category, amount) {
+            const row = expenseTableBody.insertRow();
+            row.insertCell(0).innerText = date;
+            row.insertCell(1).innerText = category;
+            row.insertCell(2).innerText = amount;
+
+            totalExpenses += parseFloat(amount);
+            totalExpensesSpan.innerText = totalExpenses.toFixed(2);
+            updateNetSavings();
+            showAlert('Expense added successfully!', 'success');
+        }
+
+        function updateNetSavings() {
+            const netSavings = totalIncome - totalExpenses;
+            netSavingsSpan.innerText = netSavings.toFixed(2);
+            const savingsPercentage = totalIncome ? (netSavings / totalIncome * 100).toFixed(2) : 0;
+            savingsPercentageSpan.innerText = savingsPercentage;
+        }
+
+        function showAlert(message, type) {
+            alertBox.innerText = message;
+            alertBox.className = type === 'success' ? 'alert success' : 'alert';
+            alertBox.style.display = 'block';
+            setTimeout(() => alertBox.style.display = 'none', 3000);
+        }
+
+        incomeForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const date = document.getElementById('incomeDate').value;
+            const source = document.getElementById('incomeSource').value;
+            const amount = document.getElementById('incomeAmount').value;
+
+            addIncomeToTable(date, source, amount);
+            localStorage.setItem('incomes', JSON.stringify([...JSON.parse(localStorage.getItem('incomes') || '[]'), { date, source, amount }]));
+            incomeForm.reset();
+        });
+
+        expenseForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const date = document.getElementById('expenseDate').value;
+            const category = document.getElementById('expenseCategory').value;
+            const amount = document.getElementById('expenseAmount').value;
+
+            addExpenseToTable(date, category, amount);
+            localStorage.setItem('expenses', JSON.stringify([...JSON.parse(localStorage.getItem('expenses') || '[]'), { date, category, amount }]));
+            expenseForm.reset();
+        });
+
+        document.getElementById('filterExpenses').addEventListener('click', function() {
+            const startDate = new Date(document.getElementById('startDate').value);
+            const endDate = new Date(document.getElementById('endDate').value);
+            const expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+            expenseTableBody.innerHTML = ''; // Clear current table
+
+            expenses.forEach(expense => {
+                const expenseDate = new Date(expense.date);
+                if (expenseDate >= startDate && expenseDate <= endDate) {
+                    addExpenseToTable(expense.date, expense.category, expense.amount);
+                }
+            });
+        });
+
+        document.getElementById('clearAll').addEventListener('click', function() {
+            localStorage.removeItem('incomes');
+            localStorage.removeItem('expenses');
+            incomeTableBody.innerHTML = '';
+            expenseTableBody.innerHTML = '';
+            totalIncome = 0;
+            totalExpenses = 0;
+            totalIncomeSpan.innerText = '0';
+            totalExpensesSpan.innerText = '0';
+            netSavingsSpan.innerText = '0';
+            savingsPercentageSpan.innerText = '0';
+            showAlert('All entries cleared!', 'success');
+        });
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
